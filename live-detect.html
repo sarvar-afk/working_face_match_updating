@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="
+  default-src 'self' data: blob:;
+  script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' https://fonts.gstatic.com;
+  img-src 'self' data: blob:;
+  connect-src 'self' data: blob:;
+  media-src 'self' blob:;
+">
+  <title>FaceMatch AI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --primary-dark: #3a56d4;
+      --secondary: #3f37c9;
+      --success: #4cc9f0;
+      --danger: #f72585;
+      --light: #f8f9fa;
+      --dark: #212529;
+      --gray: #6c757d;
+      --border-radius: 12px;
+      --shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      --transition: all 0.3s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f5f7ff;
+      color: var(--dark);
+      line-height: 1.6;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .app-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .app-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .app-title h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--primary);
+      margin: 0;
+    }
+
+    .app-icon {
+      width: 32px;
+      height: 32px;
+      background-color: var(--primary);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .app-content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    @media (max-width: 768px) {
+      .app-content {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .panel {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .panel-header {
+      padding: 14px 20px;
+      background-color: var(--primary);
+      color: white;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 15px;
+    }
+
+    .panel-body {
+      padding: 15px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Updated your existing camera-view to match new design */
+    .camera-view,
+    .reference-view {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      background: linear-gradient(135deg, #f5f7ff 0%, #e8ecff 100%);
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    video,
+    canvas,
+    #referenceImage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    #video {
+      transform: scaleX(-1);
+    }
+
+    #referenceImage {
+      object-fit: contain;
+      background: #f0f0f0;
+      display: none;
+    }
+
+    /* Updated your empty state styling */
+    #noReference {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+      color: var(--gray);
+      width: 100%;
+      height: 100%;
+    }
+
+    #noReference::before {
+      content: "\f007";
+      font-family: "Font Awesome 6 Free";
+      font-weight: 400;
+      font-size: 40px;
+      margin-bottom: 12px;
+      color: #d1d5db;
+    }
+
+    /* Updated upload area styling */
+    .upload-box {
+      border: 2px dashed #d1d5db;
+      border-radius: var(--border-radius);
+      padding: 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      margin-top: 15px;
+      background-color: #f9fafb;
+    }
+
+    .upload-box:hover {
+      border-color: var(--primary);
+      background-color: rgba(67, 97, 238, 0.05);
+    }
+
+    .upload-box::before {
+      content: "\f0ee";
+      font-family: "Font Awesome 6 Free";
+      font-weight: 900;
+      font-size: 28px;
+      color: var(--primary);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    /* Updated result area styling */
+    .result-area {
+      background: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow);
+      padding: 18px;
+      margin: 15px 0;
+      text-align: center;
+    }
+
+    .result-text {
+      font-size: 24px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      min-height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    /* Updated accuracy meter */
+    .accuracy-meter {
+      width: 100%;
+      margin: 12px auto 0;
+    }
+
+    .meter-labels {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 4px;
+      font-size: 11px;
+      color: var(--gray);
+    }
+
+    #accuracyBar {
+      height: 10px;
+      background: linear-gradient(to right, var(--danger), #ffb800, var(--primary));
+      border-radius: 5px;
+      width: 0%;
+      transition: width 0.3s ease-out;
+    }
+
+    #accuracyText {
+      text-align: center;
+      font-weight: 600;
+      margin-top: 6px;
+      font-size: 13px;
+    }
+
+    /* Updated button styling */
+    .button-row {
+      display: flex;
+      gap: 10px;
+      margin: 0;
+      justify-content: center;
+    }
+
+    button {
+      background-color: var(--primary);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      border-radius: var(--border-radius);
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-weight: 500;
+    }
+
+    button:hover {
+      background-color: var(--primary-dark);
+    }
+
+    #resetBtn {
+      background-color: transparent;
+      color: var(--primary);
+      border: 1px solid var(--primary);
+    }
+
+    #resetBtn:hover {
+      background-color: rgba(67, 97, 238, 0.1);
+    }
+
+    /* Updated loader styling */
+    .loader {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid var(--primary);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin: -20px 0 0 -20px;
+      display: none;
+      z-index: 10;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* Status indicator */
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      background-color: #f0f4ff;
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--primary);
+    }
+
+    .status::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--primary);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.5;
+        transform: scale(0.95);
+      }
+
+      50% {
+        opacity: 1;
+        transform: scale(1.1);
+      }
+
+      100% {
+        opacity: 0.5;
+        transform: scale(0.95);
+      }
+    }
+
+    /* Hidden elements */
+    #imageUpload {
+      display: none;
+    }
+
+    #downloadLink {
+      position: absolute;
+      left: -9999px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-container">
+    <header class="app-header">
+      <div class="app-title">
+        <div class="app-icon">FM</div>
+        <h1>FaceMatch AI</h1>
+      </div>
+      <div class="status" id="status">🟢 Ready</div>
+    </header>
+
+    <div class="app-content">
+      <div class="panel">
+        <div class="panel-header">
+          <span>Live Camera</span>
+          <i class="fas fa-video"></i>
+        </div>
+        <div class="panel-body">
+          <div class="camera-view">
+            <video id="video" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-header">
+          <span>Reference Image</span>
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="panel-body">
+          <div class="reference-view">
+            <div id="loader" class="loader"></div>
+            <img id="referenceImage" alt="Reference Image" />
+            <div id="noReference">No reference image</div>
+          </div>
+          <div class="upload-box" id="uploadTrigger">
+            Upload Reference Image
+
+            <div style="font-size: 13px; color: var(--gray);">Click or drag & drop an image file</div>
+            <input type="file" id="imageUpload" accept="image/*" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-area">
+      <div id="result" class="result-text">🔎 Detecting...</div>
+      <div class="accuracy-meter">
+        <div class="meter-labels">
+          <span>Low</span>
+          <span>Medium</span>
+          <span>High</span>
+        </div>
+        <div style="background: #e5e7eb; border-radius: 5px; overflow: hidden;">
+          <div id="accuracyBar"></div>
+        </div>
+        <div id="accuracyText">Accuracy: 0%</div>
+      </div>
+    </div>
+
+    <div class="button-row">
+      <button id="captureBtn"><i class="fas fa-camera"></i> Capture Reference</button>
+      <button id="resetBtn"><i class="fas fa-redo"></i> Reset</button>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="checkbox" id="toggleOverlay" checked>
+        Show Overlay
+      </label>
+    </div>
+
+    <audio id="hornSound" src="horn.mp3" preload="auto"></audio>
+    <a id="downloadLink" style="display: none;"></a>
+  </div>
+
+  <script src="/face-api.min.js"></script>
+  <script src="/live-detect.js"></script>
+  <script nonce="2726c7f26c96">
+    // Disable right click
+    document.addEventListener("contextmenu", (e) => e.preventDefault());
+
+    // Disable common dev tools & save shortcuts
+    document.addEventListener("keydown", (e) => {
+      if (
+        e.ctrlKey &&
+        (e.key.toLowerCase() === "u" || // View source
+          e.key.toLowerCase() === "s" || // Save
+          e.key.toLowerCase() === "c" || // Copy
+          e.key.toLowerCase() === "i" || // DevTools
+          e.key.toLowerCase() === "j")   // Console
+      ) {
+        e.preventDefault();
+      }
+      if (e.key === "F12") {
+        e.preventDefault();
+      }
+    });
+  </script>
+</body>
+
+
+</html>
